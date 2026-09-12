@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Great Journey</title>
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(145deg,#eee8ff,#fff3d6);color:#172033}
+main{max-width:680px;margin:auto;padding:16px}
+.hero,.card{background:#fffdf8;border-radius:24px;padding:20px;margin:12px 0;box-shadow:0 5px 20px #0001}
+.hero{background:#172033;color:white}.hero h1{font-size:38px;margin:6px 0}.tag{font-size:12px;letter-spacing:1.5px;font-weight:800}
+.row{display:flex;justify-content:space-between;align-items:center}.badge{background:#eee8ff;color:#5038c8;padding:7px 11px;border-radius:99px;font-weight:800}
+.bar{height:10px;background:#ddd;border-radius:99px;overflow:hidden}.fill{height:100%;width:0;background:#6d4aff}
+h2{margin:0 0 8px}p{font-size:17px;line-height:1.4}
+.btn{width:100%;padding:15px;border:0;border-radius:15px;background:#6d4aff;color:white;font-size:17px;font-weight:800;margin-top:8px}
+.btn:disabled{opacity:.55}.done{display:none;background:#e5f7e9;padding:12px;border-radius:14px;margin-top:10px;font-weight:800}
+.pending{background:#fff4cf;border:2px solid #f0c75e;padding:12px;border-radius:14px;margin-top:10px;font-weight:800}
+.verified{background:#e5f7e9;border:2px solid #76c893;padding:12px;border-radius:14px;margin-top:10px;font-weight:800}
+.verify{background:#eaf3ff;border:2px solid #77a9e8}.verify h2{color:#245a9c}
+.chaos{background:#fff0f6;border:2px dashed #ff75a5}
+small{opacity:.65}.footer{text-align:center;opacity:.5;font-size:12px;margin:22px}
+hr{border:0;border-top:1px solid #ddd;margin:16px 0}
+</style>
+</head>
+<body>
+<main>
+<section class="hero">
+<div class="tag">TOP SECRET • MISSION 001</div>
+<h1>THE GREAT JOURNEY</h1>
+<p id="welcome">Welcome, Agent.</p>
+</section>
+
+<section class="card row">
+<div><span class="badge" id="agent">AGENT</span><br><small>Personal mission profile</small></div>
+<strong id="xp">0 XP</strong>
+</section>
+
+<section class="card">
+<strong>Mission progress</strong>
+<div class="bar"><div class="fill" id="fill"></div></div>
+<small id="progress">0 of 5 verified</small>
+</section>
+
+<div id="missions"></div>
+
+<section class="card chaos">
+<h2>🎲 Chaos Mission</h2>
+<p id="chaos">Need something ridiculous?</p>
+<button class="btn" onclick="chaosMission()">ACTIVATE CHAOS</button>
+</section>
+
+<div class="footer">The Great Journey • Mission Control © Vicky O’Dell</div>
+</main>
+
+<script>
+const q=new URLSearchParams(location.search);
+const agent=(q.get('agent')||localStorage.getItem('greatJourney_activeAgent')||'agent').toLowerCase();
+const names={lydia:'Lydia',grace:'Grace'};
+const n=names[agent]||agent[0].toUpperCase()+agent.slice(1);
+const key='greatJourney_'+agent;
+let s=JSON.parse(localStorage.getItem(key)||'{"verified":[],"pending":null,"xp":0,"approvedBy":[]}');
+
+localStorage.setItem('greatJourney_activeAgent',agent);
+
+document.getElementById('welcome').textContent='Welcome, Agent '+n+'. Mission Control is watching.';
+document.getElementById('agent').textContent='AGENT '+n.toUpperCase();
+
+const missions=[
+['🔎 Mission 1 — Spotter','Passenger only! Find a vehicle in an unusual or brilliant colour.','MISSION READY'],
+['🔤 Mission 2 — Letter Hunt','Find the letter <b>'+['G','J','M','S','T','A','R'][(n.length+2)%7]+'</b> outside the car — a sign, shop, vehicle or building.','MISSION READY'],
+['😂 Mission 3 — Weirdness Detector','Spot something that makes you laugh, wonder, or say “What on earth is THAT?”','MISSION READY'],
+['🤝 Mission 4 — Two-Agent Challenge','Both agents agree on the best-looking thing you have passed. Invent a secret codename for it.','MISSION READY'],
+['🏁 Mission 5 — Final Transmission','Near the destination, each agent says one word describing the journey. Combine them into your final secret message.','MISSION READY']
+];
+
+const adultNames={vicky:'Director Vicky',matt:'Mission Control Matt',loretta:'Chief Intelligence Officer Loretta'};
+
+function save(){localStorage.setItem(key,JSON.stringify(s));}
+function draw(){
+ const verified=s.verified.length;
+ document.getElementById('missions').innerHTML=missions.map((m,i)=>{
+   const num=i+1, isVerified=s.verified.includes(num), isPending=s.pending===num;
+   let action='';
+   if(isVerified){
+     action='<div class="verified">✅ VERIFIED by '+(s.approvedBy[num]||'Mission Control')+'<br>⭐ Mission complete!</div>';
+   } else if(isPending){
+     action='<div class="pending">⏳ AWAITING MISSION CONTROL<br>Show your work to an adult, then have them tap their Mission Control NFC tag on this phone.</div>';
+   } else if(num===verified+1){
+     action='<button class="btn" onclick="submitMission('+num+')">I HAVE COMPLETED THIS MISSION</button>';
+   } else {
+     action='<button class="btn" disabled>🔒 Complete the previous mission first</button>';
+   }
+   return '<section class="card"><h2>'+m[0]+'</h2><p>'+m[1]+'</p>'+action+'</section>';
+ }).join('');
+ document.getElementById('xp').textContent=s.xp+' XP';
+ document.getElementById('progress').textContent=verified+' of 5 verified';
+ document.getElementById('fill').style.width=verified*20+'%';
+ save();
+}
+
+function submitMission(i){
+ if(s.verified.includes(i) || s.pending)return;
+ s.pending=i;
+ save();
+ draw();
+}
+
+function approve(adult){
+ if(!s.pending)return;
+ const i=s.pending;
+ s.verified.push(i);
+ s.approvedBy[i]=adultNames[adult]||'Mission Control';
+ s.xp+=i===5?50:20;
+ s.pending=null;
+ save();
+ renderNormal();
+}
+
+function renderNormal(){
+ document.body.innerHTML=document.body.innerHTML; // harmless page refresh trigger is avoided below
+ location.href=location.pathname+'?agent='+encodeURIComponent(agent)+'&approved=1';
+}
+
+function chaosMission(){
+ const chaos=[
+ 'Do your best spy pose for 5 seconds.',
+ 'Find something yellow.',
+ 'Invent a ridiculous name for the next roundabout.',
+ 'Everyone says “CLASSIFIED!” at the same time.',
+ 'Spot a dog — bonus points if it looks like it is on a mission.',
+ 'Give a random object a secret-agent codename.'
+ ];
+ document.getElementById('chaos').textContent=chaos[Math.floor(Math.random()*chaos.length)];
+}
+
+/* Adult NFC verification:
+   Adult tag URL: ?verify=vicky / ?verify=matt / ?verify=loretta
+   The active agent is remembered on this phone, so the adult does not need to choose the child.
+*/
+const verifier=q.get('verify');
+if(verifier){
+ const box=document.createElement('section');
+ box.className='card verify';
+ box.innerHTML='<h2>🔐 Mission Control</h2><p>Verification requested for <strong>Agent '+n+'</strong>.</p>';
+ if(s.pending){
+   box.innerHTML+='<p><strong>Mission '+s.pending+' is awaiting verification.</strong><br>Check the agent’s work, then approve it below.</p><button class="btn" onclick="approveVerifier()">APPROVE MISSION '+s.pending+'</button>';
+ }else{
+   box.innerHTML+='<p>There is no mission currently waiting for approval.</p>';
+ }
+ document.querySelector('main').insertBefore(box,document.getElementById('missions'));
+}
+function approveVerifier(){
+ approve(verifier);
+}
+draw();
+</script>
+</body>
+</html>
